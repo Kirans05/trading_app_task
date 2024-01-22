@@ -27,8 +27,7 @@ interface postionDetailsInterface {
 }
 
 const Home = () => {
-  const socket = io("wss://quotes.equidity.io:443", {
-    transports: ["websocket"],
+  const socket = io("wss://quotes.equidity.io:3000", {
     autoConnect: false,
   });
 
@@ -61,31 +60,14 @@ const Home = () => {
   };
 
   const feedScubscribeHandler = (): void => {
-    // socket.emit("subscribe", "feeds");
-    let obj: tableBody = {
-      key: (positionsDetails.body.length + 1).toString(),
-      action: 0,
-      close_price: 1.07859,
-      comment: "",
-      open_price: 1.07346,
-      open_time: 1705440482,
-      position_id: 95715668,
-      profit: 3.14,
-      sl: 0,
-      swap: -0.21,
-      symbol: "AUDNZD",
-      tp: 0,
-      volume: 0.01,
-    };
-    setPositionDetails({
-      ...positionsDetails,
-      body: [...positionsDetails.body, { ...obj }],
+    socket.emit("subscribe", "feeds", (data:any) => {
+      console.log("any data", data)
     });
   };
 
   let getDataFromRoute = async () => {
     let options = {
-      url: "https://trading-app-task.vercel.app/api/user",
+      url: "http://localhost:3000/api/user",
       method: "GET",
     };
     try {
@@ -118,27 +100,29 @@ const Home = () => {
   };
 
   useEffect(() => {
-    let postionsArrDetails = localStorage.getItem("postionsArrDetails");
-    if (postionsArrDetails == null) {
+    // let postionsArrDetails = localStorage.getItem("postionsArrDetails");
+    // if (postionsArrDetails == null) {
       getDataFromRoute();
-    } else {
-      updatePositionDetailsToSTate(JSON.parse(postionsArrDetails));
-    }
+    // } else {
+    //   updatePositionDetailsToSTate(JSON.parse(postionsArrDetails));
+    // }
+  }, []);
+
+  useEffect(() => {
+    socket.connect();
   }, []);
 
 
   useEffect(() => {
-    // socket.connect()
-    // socket.on("connect_error", (err) => {
-    //   console.log("error socket", err)
-    // })
-    // console.log("socket --", socket)
-  }, [])
+    socket.onAny((eventName, ...args) => {
+      console.log(`Received event: ${eventName}`, args);
+    });
+  },[socket])
 
   return (
     <div className="App">
       {positionsDetails.body.length == 0 ? (
-        <div>Loading...</div>
+        <div>Open Positions Loading...</div>
       ) : (
         <div>
           <Table
