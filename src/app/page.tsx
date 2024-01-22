@@ -67,7 +67,7 @@ const Home = () => {
 
   let getDataFromRoute = async () => {
     let options = {
-      url: "http://localhost:3000/api/user",
+      url: "https://trading-app-task.vercel.app/api/user",
       method: "GET",
     };
     try {
