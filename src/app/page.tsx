@@ -88,10 +88,10 @@ const Home = () => {
         response.data !== "login error" &&
         response.data !== "position api error"
       ) {
-        localStorage.setItem(
-          "postionsArrDetails",
-          JSON.stringify(response.data)
-        );
+        // localStorage.setItem(
+        //   "postionsArrDetails",
+        //   JSON.stringify(response.data)
+        // );
         updatePositionDetailsToSTate(response.data);
       }
     } catch (err) {
