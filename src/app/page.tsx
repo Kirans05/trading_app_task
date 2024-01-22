@@ -27,9 +27,7 @@ interface postionDetailsInterface {
 }
 
 const Home = () => {
-  const socket = io("wss://quotes.equidity.io:3000", {
-    autoConnect: false,
-  });
+  const socket = io("wss://quotes.equidity.io:3000");
 
   const [positionsDetails, setPositionDetails] =
     useState<postionDetailsInterface>({
@@ -38,6 +36,8 @@ const Home = () => {
     });
 
   const [channelSubscribed, setChannelSubscribed] = useState<boolean>(false);
+
+  const [positionsIndex, setPositionsIndex] = useState(null);
 
   const updatePositionDetailsToSTate = (data: any): void => {
     let posHeaders = [];
@@ -49,9 +49,18 @@ const Home = () => {
       });
     }
 
+    let symbolObj: any = {};
+
     let posBody = data.map((item: any, index: number) => {
+      if (symbolObj[item.symbol]) {
+        symbolObj[item.symbol].push(index);
+      } else {
+        symbolObj[item.symbol] = [index];
+      }
       return { ...item, key: (index + 1).toString() };
     });
+
+    setPositionsIndex({ ...symbolObj });
 
     setPositionDetails({
       header: [...posHeaders],
@@ -60,9 +69,8 @@ const Home = () => {
   };
 
   const feedScubscribeHandler = (): void => {
-    socket.emit("subscribe", "feeds", (data:any) => {
-      console.log("any data", data)
-    });
+    socket.emit("subscribe", "feeds");
+    setChannelSubscribed(true);
   };
 
   let getDataFromRoute = async () => {
@@ -72,7 +80,6 @@ const Home = () => {
     };
     try {
       let response = await axios(options);
-      console.log("re", response);
       if (response.data === "login error") {
         alert("login error");
         return;
@@ -88,10 +95,6 @@ const Home = () => {
         response.data !== "login error" &&
         response.data !== "position api error"
       ) {
-        // localStorage.setItem(
-        //   "postionsArrDetails",
-        //   JSON.stringify(response.data)
-        // );
         updatePositionDetailsToSTate(response.data);
       }
     } catch (err) {
@@ -100,24 +103,41 @@ const Home = () => {
   };
 
   useEffect(() => {
-    // let postionsArrDetails = localStorage.getItem("postionsArrDetails");
-    // if (postionsArrDetails == null) {
-      getDataFromRoute();
-    // } else {
-    //   updatePositionDetailsToSTate(JSON.parse(postionsArrDetails));
-    // }
+    getDataFromRoute();
   }, []);
 
   useEffect(() => {
-    socket.connect();
-  }, []);
-
-
-  useEffect(() => {
-    socket.onAny((eventName, ...args) => {
-      console.log(`Received event: ${eventName}`, args);
+    socket.on("connect", () => {
+      console.log("connected");
     });
-  },[socket])
+
+    socket.on("message", (data: any) => {
+      if (positionsIndex != null) {
+        let arr: any = positionsIndex[data.symbol];
+        if (arr != undefined) {
+          let newPositionsArr = [...positionsDetails.body];
+          if (arr.length == 1) {
+            newPositionsArr[arr[0]] = {
+              ...newPositionsArr[arr[0]],
+              open_price: data.bid,
+              close_price: data.ask,
+            };
+          } else if (arr.length > 1) {
+            newPositionsArr = newPositionsArr.map((item) => {
+              if (item.symbol == data.symbol) {
+                return { ...item, open_price: data.bid, close_price: data.ask };
+              }
+              return item;
+            });
+          }
+          setPositionDetails({
+            ...positionsDetails,
+            body: [...newPositionsArr],
+          });
+        }
+      }
+    });
+  }, [socket]);
 
   return (
     <div className="App">
@@ -134,7 +154,7 @@ const Home = () => {
               <Button
                 type="primary"
                 size="large"
-                onClick={feedScubscribeHandler}
+                onClick={() => feedScubscribeHandler()}
               >
                 Subscribe to feed
               </Button>
