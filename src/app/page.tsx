@@ -69,8 +69,10 @@ const Home = () => {
   };
 
   const feedScubscribeHandler = (): void => {
-    socket.emit("subscribe", "feeds");
-    setChannelSubscribed(true);
+    if (channelSubscribed == false) {
+      socket.emit("subscribe", "feeds");
+      setChannelSubscribed(true);
+    }
   };
 
   let getDataFromRoute = async () => {
@@ -80,6 +82,7 @@ const Home = () => {
     };
     try {
       let response = await axios(options);
+      console.log("res", response);
       if (response.data === "login error") {
         alert("login error");
         return;
@@ -119,13 +122,17 @@ const Home = () => {
           if (arr.length == 1) {
             newPositionsArr[arr[0]] = {
               ...newPositionsArr[arr[0]],
-              open_price: data.bid,
               close_price: data.ask,
+              profit: newPositionsArr[arr[0]]["open_price"] - data.ask,
             };
           } else if (arr.length > 1) {
             newPositionsArr = newPositionsArr.map((item) => {
               if (item.symbol == data.symbol) {
-                return { ...item, open_price: data.bid, close_price: data.ask };
+                return {
+                  ...item,
+                  close_price: data.ask,
+                  profit: newPositionsArr[arr[0]]["open_price"] - data.ask,
+                };
               }
               return item;
             });
